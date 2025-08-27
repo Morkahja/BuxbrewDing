@@ -1,0 +1,6 @@
+## Interface: 11302
+## Title: BuxbrewDing
+## Notes: Announces RP level-ups in guild chat
+## Author: Morkah
+## Version: 1.0
+BuxbrewDing.lua
