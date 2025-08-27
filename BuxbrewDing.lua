@@ -70,8 +70,8 @@ BuxbrewDing_LastLevel = BuxbrewDing_LastLevel or 0
 
 -- Helper: trim whitespace
 local function trim(s)
-    if not s then return "" end
-    return (s:gsub("^%s*(.-)%s*$", "%1"))
+    if s == nil then return "" end
+    return tostring(s):gsub("^%s*(.-)%s*$", "%1")
 end
 
 -- Announce to guild (only if in guild)
