@@ -1,7 +1,7 @@
 -- BuxbrewDing by Morkah
 -- Announces your level-ups in guild chat with RP flavor
 
--- Table of RP level messages
+-- Table of RP level messages (unique and level-incorporated)
 local LevelMessages = {
     [1]  = "Level 1 begins, and I step into Azeroth with wide eyes and trembling fists!",
     [2]  = "At level 2, I feel the thrill of adventure coursing through my veins!",
@@ -13,7 +13,6 @@ local LevelMessages = {
     [8]  = "Eight summers of life, and I strike swifter than the wind!",
     [9]  = "Nine battles deep, and I am just getting started!",
     [10] = "Level 10 awakens new talents; chaos walks beside me!",
-
     [11] = "At 11, every foe shall remember the day I passed through!",
     [12] = "Twelve victories mark my path, yet the journey continues!",
     [13] = "Level 13! Fate may frown, but I carve my own destiny!",
@@ -24,7 +23,6 @@ local LevelMessages = {
     [18] = "At 18, no longer a child, the world is my proving ground!",
     [19] = "Level 19 brings new horizons and fiercer resolve!",
     [20] = "Twenty summers strong; mounts and glory await me!",
-
     [21] = "At 21, my courage rivals the fiercest storms!",
     [22] = "Level 22! Every battle hones me sharper than any blade!",
     [23] = "Twenty-three steps into legend, I move unseen and unstoppable!",
@@ -34,8 +32,7 @@ local LevelMessages = {
     [27] = "Level 27! Adventure calls, and I answer boldly!",
     [28] = "Twenty-eight summers of skill, swift as wind, relentless as tide!",
     [29] = "Level 29! One final push before the next great milestone!",
-    [30] = "Thirty! Epic mounts await, and legends whisper my name!",
-
+    [30] = "Thirty! Epic adventures await, and legends whisper my name!",
     [31] = "At 31, my story spreads across every tavern and battlefield!",
     [32] = "Level 32! Shadows flee at my approach, heroes cheer my deeds!",
     [33] = "Thirty-three! Forests whisper my name with awe and fear!",
@@ -46,7 +43,6 @@ local LevelMessages = {
     [38] = "Thirty-eight! Enemies I once feared now flee at my shadow!",
     [39] = "At 39, my fire burns brighter than ever, unstoppable!",
     [40] = "Forty summers of life; mount polished, courage unshaken!",
-
     [41] = "Level 41! Power creeps into every strike I deliver!",
     [42] = "At 42, the answers of the world unfold as I step forward!",
     [43] = "Forty-three! Enemies tremble, for my name carries weight!",
@@ -57,7 +53,6 @@ local LevelMessages = {
     [48] = "At 48, shadows shrink, and my courage shines like dawn!",
     [49] = "Level 49! One step from fifty glory, nothing can halt me!",
     [50] = "Fifty summers strong; half a century of leveling chaos!",
-
     [51] = "Level 51! The battlegrounds echo with my name and deeds!",
     [52] = "At 52, my might stretches beyond what eyes can see!",
     [53] = "Fifty-three! Hawk-eyed and battle-ready, I press onward!",
@@ -70,22 +65,17 @@ local LevelMessages = {
     [60] = "Sixty! Champion of Turtle WoW, legend made, all hail me!",
 }
 
--- Saved variable to track last announced level
-BuxbrewDing_LastLevel = BuxbrewDing_LastLevel or 0
+-- Create frame and register for level up
+local frame = CreateFrame("Frame")
+frame:RegisterEvent("PLAYER_LEVEL_UP")
 
--- Function to check level and announce in guild chat
-local function BuxbrewDing_OnEvent(self, event, newLevel)
-    if event == "PLAYER_LEVEL_UP" and newLevel <= 60 then
-        local msg = LevelMessages[newLevel]
-        if msg then
+-- Use the level passed by the event to avoid off-by-one errors
+frame:SetScript("OnEvent", function(self, event, newLevel)
+    local lvl = tonumber(newLevel) or UnitLevel("player")
+    if lvl and lvl <= 60 then
+        local msg = LevelMessages[lvl] or ("I rise to level " .. lvl .. "!")
+        if IsInGuild() then
             SendChatMessage(msg, "GUILD")
         end
-        BuxbrewDing_LastLevel = newLevel
     end
-end
-
-
--- Frame to handle events
-local BuxbrewDingFrame = CreateFrame("Frame")
-BuxbrewDingFrame:RegisterEvent("PLAYER_LEVEL_UP")
-BuxbrewDingFrame:SetScript("OnEvent", BuxbrewDing_OnEvent)
+end)
