@@ -1,11 +1,11 @@
 -- BuxbrewDing by Morkah
--- Announces RP/roleplay level-ups in guild chat and provides /buxbrew commands.
+-- Stable version: avoids string-method indexing errors and is defensive.
 
 -- RP-flavored messages 1..60 (unique & level-incorporated)
 local LevelMessages = {
     [1]  = "Level 1 begins, and I step into Azeroth with wide eyes and trembling fists!",
     [2]  = "At level 2, I feel the thrill of adventure coursing through my veins!",
-    [3]  = "Level 3! Kobolds beware — my blade hungers for its first foes!",
+    [3]  = "Level 3! Kobolds beware - my blade hungers for its first foes!",
     [4]  = "Four steps in, and chaos follows in my wake!",
     [5]  = "Level 5! Victory tastes sweet on my sword, and I crave more!",
     [6]  = "At 6, even the forest trembles as I approach!",
@@ -39,7 +39,7 @@ local LevelMessages = {
     [34] = "Level 34, each strike tells a tale, each foe humbled!",
     [35] = "Thirty-five summers climbed; the Plaguelands beckon me onward!",
     [36] = "At 36, steel and spell bend to my will as dungeons yield!",
-    [37] = "Level 37! Deep caverns, dark forests — all feel my might!",
+    [37] = "Level 37! Deep caverns, dark forests - all feel my might!",
     [38] = "Thirty-eight! Enemies I once feared now flee at my shadow!",
     [39] = "At 39, my fire burns brighter than ever, unstoppable!",
     [40] = "Forty summers of life; mount polished, courage unshaken!",
@@ -68,10 +68,10 @@ local LevelMessages = {
 -- Saved var for last announced level
 BuxbrewDing_LastLevel = BuxbrewDing_LastLevel or 0
 
--- Helper: trim whitespace
+-- Helper: trim whitespace (defensive - uses string.* functions)
 local function trim(s)
     if s == nil then return "" end
-    return tostring(s):gsub("^%s*(.-)%s*$", "%1")
+    return string.gsub(tostring(s), "^%s*(.-)%s*$", "%1")
 end
 
 -- Announce to guild (only if in guild)
@@ -87,7 +87,7 @@ end
 -- Preview locally (no guild chat)
 local function PreviewLevel(lvl)
     local msg = LevelMessages[lvl] or ("I rise to level " .. lvl .. "!")
-    DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[BuxbrewDing Preview "..lvl.."]|r "..msg)
+    DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[BuxbrewDing Preview " .. tostring(lvl) .. "]|r " .. tostring(msg))
 end
 
 -- Frame and event handling
@@ -95,18 +95,19 @@ local frame = CreateFrame("Frame")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:RegisterEvent("PLAYER_LEVEL_UP")
 
--- Use explicit arg1 to avoid vararg syntax issues
-frame:SetScript("OnEvent", function(self, event, arg1, arg2, arg3, arg4)
+-- Use explicit arg1/arg2 to avoid vararg syntax issues
+frame:SetScript("OnEvent", function(self, event, arg1, arg2)
     if event == "PLAYER_ENTERING_WORLD" then
         local cur = tonumber(UnitLevel("player")) or 0
         BuxbrewDing_LastLevel = cur
         DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99BuxbrewDing by Morkah loaded!|r Type |cffffff00/buxbrew help|r for commands.")
     elseif event == "PLAYER_LEVEL_UP" then
-        -- PLAYER_LEVEL_UP passes the new level as the first arg
+        -- PLAYER_LEVEL_UP passes the new level as the first arg (arg1)
         local newLevel = tonumber(arg1) or tonumber(UnitLevel("player")) or 0
         if newLevel > BuxbrewDing_LastLevel and newLevel <= 60 then
             if IsInGuild() then
-                SendChatMessage(LevelMessages[newLevel] or ("I rise to level " .. newLevel .. "!"), "GUILD")
+                local msg = LevelMessages[newLevel] or ("I rise to level " .. newLevel .. "!")
+                SendChatMessage(msg, "GUILD")
             end
             BuxbrewDing_LastLevel = newLevel
         end
@@ -116,21 +117,22 @@ end)
 -- Slash command: /buxbrew
 SLASH_BUXBREWDING1 = "/buxbrew"
 SlashCmdList["BUXBREWDING"] = function(input)
-    local text = trim(input or "")
+    local text = trim(input)
     if text == "" then
         DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[BuxbrewDing]|r Usage: |cffffff00/buxbrew help|r")
         return
     end
 
-    local cmd, rest = text:match("^(%S+)%s*(.-)$")
-    cmd = cmd and cmd:lower() or ""
+    -- Use string.match (not string-method-call on the input) and be defensive
+    local cmd, rest = string.match(text, "^(%S+)%s*(.-)$")
+    cmd = cmd and string.lower(cmd) or ""
     rest = trim(rest or "")
 
     -- shorthand: /buxbrew 30
-    if tonumber(cmd) then
-        local lvl = tonumber(cmd)
-        if lvl >= 1 and lvl <= 60 then
-            PreviewLevel(lvl)
+    local n = tonumber(cmd)
+    if n then
+        if n >= 1 and n <= 60 then
+            PreviewLevel(n)
         else
             DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[BuxbrewDing]|r Level must be 1-60.")
         end
@@ -151,7 +153,7 @@ SlashCmdList["BUXBREWDING"] = function(input)
         local lvl = tonumber(rest)
         if lvl and lvl >= 1 and lvl <= 60 then
             AnnounceLevelToGuild(lvl)
-            DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[BuxbrewDing]|r Announced level "..lvl.." to guild.")
+            DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[BuxbrewDing]|r Announced level " .. tostring(lvl) .. " to guild.")
         else
             DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[BuxbrewDing]|r Usage: |cffffff00/buxbrew announce <level>|r (1-60)")
         end
