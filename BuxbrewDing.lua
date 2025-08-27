@@ -74,16 +74,16 @@ local LevelMessages = {
 BuxbrewDing_LastLevel = BuxbrewDing_LastLevel or 0
 
 -- Function to check level and announce in guild chat
-local function BuxbrewDing_OnEvent(self, event, arg1)
-    local currentLevel = UnitLevel("player")
-    if currentLevel > BuxbrewDing_LastLevel and currentLevel <= 60 then
-        local msg = LevelMessages[currentLevel]
+local function BuxbrewDing_OnEvent(self, event, newLevel)
+    if event == "PLAYER_LEVEL_UP" and newLevel <= 60 then
+        local msg = LevelMessages[newLevel]
         if msg then
             SendChatMessage(msg, "GUILD")
         end
-        BuxbrewDing_LastLevel = currentLevel
+        BuxbrewDing_LastLevel = newLevel
     end
 end
+
 
 -- Frame to handle events
 local BuxbrewDingFrame = CreateFrame("Frame")
