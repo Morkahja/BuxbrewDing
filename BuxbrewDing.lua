@@ -1,7 +1,7 @@
 -- BuxbrewDing by Morkah
--- Announces your level-ups in guild chat with RP flavor
+-- Announces RP/roleplay level-ups in guild chat and provides a /buxbrew test command.
 
--- Table of RP level messages (unique and level-incorporated)
+-- RP-flavored messages 1..60 (unique & level-incorporated)
 local LevelMessages = {
     [1]  = "Level 1 begins, and I step into Azeroth with wide eyes and trembling fists!",
     [2]  = "At level 2, I feel the thrill of adventure coursing through my veins!",
@@ -32,7 +32,7 @@ local LevelMessages = {
     [27] = "Level 27! Adventure calls, and I answer boldly!",
     [28] = "Twenty-eight summers of skill, swift as wind, relentless as tide!",
     [29] = "Level 29! One final push before the next great milestone!",
-    [30] = "Thirty! Epic adventures await, and legends whisper my name!",
+    [30] = "Thirty! Epic mounts await, and legends whisper my name!",
     [31] = "At 31, my story spreads across every tavern and battlefield!",
     [32] = "Level 32! Shadows flee at my approach, heroes cheer my deeds!",
     [33] = "Thirty-three! Forests whisper my name with awe and fear!",
@@ -65,17 +65,109 @@ local LevelMessages = {
     [60] = "Sixty! Champion of Turtle WoW, legend made, all hail me!",
 }
 
--- Create frame and register for level up
+-- saved var for last announced level
+BuxbrewDing_LastLevel = BuxbrewDing_LastLevel or 0
+
+-- helper: trim whitespace
+local function trim(s) return (s:gsub("^%s*(.-)%s*$", "%1")) end
+
+-- announce function (only sends to guild when actually leveling)
+local function AnnounceLevelToGuild(lvl)
+    local msg = LevelMessages[lvl] or ("I rise to level " .. lvl .. "!")
+    if IsInGuild() then
+        SendChatMessage(msg, "GUILD")
+    else
+        DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[BuxbrewDing]|r You are not in a guild; not sending.")
+    end
+end
+
+-- preview function (prints locally, does NOT send guild chat)
+local function PreviewLevel(lvl)
+    local msg = LevelMessages[lvl] or ("I rise to level " .. lvl .. "!")
+    DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[BuxbrewDing Preview "..lvl.."]|r "..msg)
+end
+
+-- frame & event handling
 local frame = CreateFrame("Frame")
+frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:RegisterEvent("PLAYER_LEVEL_UP")
 
--- Use the level passed by the event to avoid off-by-one errors
-frame:SetScript("OnEvent", function(self, event, newLevel)
-    local lvl = tonumber(newLevel) or UnitLevel("player")
-    if lvl and lvl <= 60 then
-        local msg = LevelMessages[lvl] or ("I rise to level " .. lvl .. "!")
-        if IsInGuild() then
-            SendChatMessage(msg, "GUILD")
+frame:SetScript("OnEvent", function(self, event, ...)
+    if event == "PLAYER_ENTERING_WORLD" then
+        -- initialize last level to current player level to avoid announcing old levels
+        local cur = tonumber(UnitLevel("player")) or 0
+        BuxbrewDing_LastLevel = cur
+        DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99BuxbrewDing by Morkah loaded!|r Type |cffffff00/buxbrew help|r for commands.")
+    elseif event == "PLAYER_LEVEL_UP" then
+        -- PLAYER_LEVEL_UP passes the new level as the first arg
+        local newLevel = tonumber(select(1, ...)) or tonumber(...)
+        if newLevel and newLevel > BuxbrewDing_LastLevel and newLevel <= 60 then
+            local msg = LevelMessages[newLevel] or ("I rise to level " .. newLevel .. "!")
+            if IsInGuild() then
+                SendChatMessage(msg, "GUILD")
+            end
+            BuxbrewDing_LastLevel = newLevel
         end
     end
 end)
+
+-- Slash command: /buxbrew
+SLASH_BUXBREWDING1 = "/buxbrew"
+SlashCmdList["BUXBREWDING"] = function(input)
+    local text = trim(input or "")
+    if text == "" then
+        DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[BuxbrewDing]|r Usage: |cffffff00/buxbrew help|r")
+        return
+    end
+
+    local cmd, rest = text:match("^(%S+)%s*(.-)$")
+    cmd = cmd and cmd:lower() or ""
+    rest = trim(rest or "")
+
+    -- if user typed a number directly: /buxbrew 30  (preview)
+    if tonumber(cmd) then
+        local lvl = tonumber(cmd)
+        if lvl >= 1 and lvl <= 60 then
+            PreviewLevel(lvl)
+        else
+            DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[BuxbrewDing]|r Level must be 1-60.")
+        end
+        return
+    end
+
+    if cmd == "test" or cmd == "preview" then
+        local lvl = tonumber(rest)
+        if lvl and lvl >= 1 and lvl <= 60 then
+            PreviewLevel(lvl)
+        else
+            DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[BuxbrewDing]|r Usage: |cffffff00/buxbrew test <level>|r (1-60)")
+        end
+        return
+    end
+
+    if cmd == "announce" or cmd == "send" then
+        local lvl = tonumber(rest)
+        if lvl and lvl >= 1 and lvl <= 60 then
+            if IsInGuild() then
+                AnnounceLevelToGuild(lvl)
+                DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[BuxbrewDing]|r Announced level "..lvl.." to guild.")
+            else
+                DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[BuxbrewDing]|r You are not in a guild.")
+            end
+        else
+            DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[BuxbrewDing]|r Usage: |cffffff00/buxbrew announce <level>|r (1-60)")
+        end
+        return
+    end
+
+    if cmd == "help" then
+        DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[BuxbrewDing]|r Commands:")
+        DEFAULT_CHAT_FRAME:AddMessage("  |cffffff00/buxbrew <n>|r - Preview message for level n (1-60)")
+        DEFAULT_CHAT_FRAME:AddMessage("  |cffffff00/buxbrew test <n>|r - Preview message for level n")
+        DEFAULT_CHAT_FRAME:AddMessage("  |cffffff00/buxbrew announce <n>|r - Send level n message to guild (requires guild)")
+        DEFAULT_CHAT_FRAME:AddMessage("  |cffffff00/buxbrew help|r - Show this help")
+        return
+    end
+
+    DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[BuxbrewDing]|r Unknown command. Type |cffffff00/buxbrew help|r for usage.")
+end
